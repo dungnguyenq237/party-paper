@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 2,
+  "title": "Design System: Party Paper",
+  "extensions": {
+    "motion": [
+      {
+        "name": "focal-entrance",
+        "value": "700ms",
+        "purpose": "One bounded demo entrance; disabled for reduced motion."
+      },
+      {
+        "name": "task-feedback",
+        "value": "320ms",
+        "purpose": "New output continuity."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stack",
+        "value": "750px"
+      }
+    ]
+  },
+  "narrative": {
+    "northStar": "The social paper press",
+    "overview": "Plum typography, coral accents and warm paper frame a real printable preview. Layered sample sheets introduce the product; generated output remains plain and legible for printing.",
+    "rules": [
+      {
+        "name": "Local processing",
+        "body": "No external requests for user content."
+      }
+    ]
+  }
+}
