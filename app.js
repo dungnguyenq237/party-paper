@@ -5,7 +5,9 @@ const bingoExample=['Someone takes a selfie','A toast','Someone laughs loudly','
 function invalidate(){generated=false;$('print').disabled=true;$('previous').disabled=true;$('next').disabled=true;$('status').textContent='';$('sheets').replaceChildren();$('preview-label').textContent=currentSheets.length?'CHANGES NOT APPLIED · CREATE TO UPDATE':'YOUR PAPER, PREVIEWED';}
 
 function sample(){const search=$('mode').value==='search';$('items').value=(search?['CELEBRATE','FRIENDS','MUSIC','LAUGHTER','DANCE','PARTY','CAKE','GAMES']:bingoExample).join('\n');$('title').value=search?'Find the good times':'Good company bingo';invalidate();}
-$('mode').onchange=()=>{const search=$('mode').value==='search';$('count-wrap').hidden=search;$('size-wrap').hidden=!search;$('items-label').textContent=search?'Your words · one per line, up to 20':'Your bingo items · one per line, at least 24';$('hint').textContent=search?'English letters only. Spaces and hyphens are removed. An answer key is included.':'Keep items under 46 characters. Every card has a free center and a unique arrangement.';sample();};
+const drafts=new Map();let activeMode='bingo';
+$('mode').onchange=()=>{drafts.set(activeMode,{title:$('title').value,items:$('items').value,count:$('count').value,size:$('size').value});activeMode=$('mode').value;const search=activeMode==='search';$('count-wrap').hidden=search;$('size-wrap').hidden=!search;$('items-label').textContent=search?'Your words · one per line, up to 20':'Your bingo items · one per line, at least 24';$('hint').textContent=search?'English letters only. Spaces and hyphens are removed. An answer key is included.':'Keep items under 46 characters. Every card has a free center and a unique arrangement.';const draft=drafts.get(activeMode);if(draft){for(const key of ['title','items','count','size'])$(key).value=draft[key];invalidate();}else sample();};
+
 for(const id of ['title','items','count','size'])$(id).addEventListener('input',invalidate);
 $('sample').onclick=sample;
 function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}
