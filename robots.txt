@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://party-paper.onrender.com/sitemap.xml
