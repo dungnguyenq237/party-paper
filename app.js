@@ -1,3 +1,5 @@
+import {games} from './assets/games.js';
+import {buildGame,chunks} from './assets/game-engine.js';
 import {cloneLocalized} from './assets/i18n.js?v=1';
 import {cleanItems,bingo,wordSearch} from './core.js';
 
@@ -5,9 +7,9 @@ const $=id=>document.getElementById(id);let generated=false;let currentSheets=[]
 const bingoExample=['Someone takes a selfie','A toast','Someone laughs loudly','A group photo','A favorite song plays','Someone says cheers','A funny story','A surprise guest','A new friendship','Someone dances','A compliment','Someone mentions the weather','A shared dessert','A happy memory','Someone arrives late','Someone wears blue','A birthday wish','A familiar face','Someone tells a joke','An unexpected song','Someone takes seconds','A warm hug','A party hat','Someone forgets a name','A photo of the food','A big smile','An inside joke','A round of applause'];
 function invalidate(){generated=false;$('print').disabled=true;$('previous').disabled=true;$('next').disabled=true;$('status').textContent='';$('sheets').replaceChildren();$('preview-label').textContent=currentSheets.length?'CHANGES NOT APPLIED · CREATE TO UPDATE':'YOUR PAPER, PREVIEWED';}
 
-function sample(){const search=$('mode').value==='search';$('items').value=(search?['CELEBRATE','FRIENDS','MUSIC','LAUGHTER','DANCE','PARTY','CAKE','GAMES']:bingoExample).join('\n');$('title').value=search?'Find the good times':'Good company bingo';invalidate();}
+function sample(){const game=games.find(g=>g.id===$('mode').value);if(game){$('items').value=game.items.join('\n');$('title').value=game.title;invalidate();return;}const search=$('mode').value==='search';$('items').value=(search?['CELEBRATE','FRIENDS','MUSIC','LAUGHTER','DANCE','PARTY','CAKE','GAMES']:bingoExample).join('\n');$('title').value=search?'Find the good times':'Good company bingo';invalidate();}
 const drafts=new Map();let activeMode='bingo';
-$('mode').onchange=()=>{drafts.set(activeMode,{title:$('title').value,items:$('items').value,count:$('count').value,size:$('size').value});activeMode=$('mode').value;const search=activeMode==='search';$('count-wrap').hidden=search;$('size-wrap').hidden=!search;$('items-label').textContent=search?'Your words · one per line, up to 20':'Your bingo items · one per line, at least 24';$('hint').textContent=search?'English letters only. Spaces and hyphens are removed. An answer key is included.':'Keep items under 46 characters. Every card has a free center and a unique arrangement.';const draft=drafts.get(activeMode);if(draft){for(const key of ['title','items','count','size'])$(key).value=draft[key];invalidate();}else sample();};
+$('mode').onchange=()=>{drafts.set(activeMode,{title:$('title').value,items:$('items').value,count:$('count').value,size:$('size').value});activeMode=$('mode').value;const game=games.find(g=>g.id===activeMode);if(game){$('count-wrap').hidden=true;$('size-wrap').hidden=true;$('items-label').textContent=game.kind==='quiz'?'Questions and answers · question | answer':'Your prompts · one per line';$('hint').textContent=game.format;const draft=drafts.get(activeMode);if(draft){for(const key of ['title','items','count','size'])$(key).value=draft[key];invalidate();}else sample();return;}const search=activeMode==='search';$('count-wrap').hidden=search;$('size-wrap').hidden=!search;$('items-label').textContent=search?'Your words · one per line, up to 20':'Your bingo items · one per line, at least 24';$('hint').textContent=search?'English letters only. Spaces and hyphens are removed. An answer key is included.':'Keep items under 46 characters. Every card has a free center and a unique arrangement.';const draft=drafts.get(activeMode);if(draft){for(const key of ['title','items','count','size'])$(key).value=draft[key];invalidate();}else sample();};
 
 for(const id of ['title','items','count','size'])$(id).addEventListener('input',invalidate);
 $('sample').onclick=sample;
@@ -15,7 +17,23 @@ function el(tag,text,cls){const e=document.createElement(tag);if(text!==undefine
 function sheet(title,subtitle,answerKey=false){const s=el('section',undefined,'print-sheet');const heading=el('h2',undefined,'preview-title');const userTitle=el('span',title);if($('title').value.trim())userTitle.dataset.userContent='true';heading.append(userTitle);if(answerKey)heading.append(document.createTextNode(' — '),el('span','Answer key'));s.append(heading,el('p',subtitle,'small'));return s;}
 $('generate').onclick=()=>{invalidate();try{const title=$('title').value.trim()||'Party printable';const items=cleanItems($('items').value);const sheets=[];
  if($('mode').value==='bingo'){const cards=bingo(items,Number($('count').value));cards.forEach((card,i)=>{const s=sheet(title,`Card ${i+1} of ${cards.length} · Five in a row wins!`);const grid=el('div',undefined,'grid');for(const [index,value]of card.entries())grid.append(el('div',value,index===12?'cell free':'cell'));s.append(grid,el('p','Party Paper · Created locally in your browser','small'));sheets.push(s);});}
- else{const puzzle=wordSearch(items,Number($('size').value));const s=sheet(title,'Find every word. Words can run across, down or diagonally.');const wordList=el('p',puzzle.words.join(' · '));wordList.dataset.userContent='true';s.append(el('pre',puzzle.grid.map(r=>r.join(' ')).join('\n'),'letters'),wordList);sheets.push(s);const a=sheet(title,'Row and column numbers start at 1.',true);for(const p of puzzle.placements){const start=p.cells[0],end=p.cells.at(-1);a.append(el('p',`${p.word}: row ${start.y+1}, col ${start.x+1} → row ${end.y+1}, col ${end.x+1}`));}sheets.push(a);}
+ else if($('mode').value==='search'){const puzzle=wordSearch(items,Number($('size').value));const s=sheet(title,'Find every word. Words can run across, down or diagonally.');const wordList=el('p',puzzle.words.join(' · '));wordList.dataset.userContent='true';s.append(el('pre',puzzle.grid.map(r=>r.join(' ')).join('\n'),'letters'),wordList);sheets.push(s);const a=sheet(title,'Row and column numbers start at 1.',true);for(const p of puzzle.placements){const start=p.cells[0],end=p.cells.at(-1);a.append(el('p',`${p.word}: row ${start.y+1}, col ${start.x+1} → row ${end.y+1}, col ${end.x+1}`));}sheets.push(a);}
+ else {
+ const game=games.find(g=>g.id===$('mode').value);
+ if(!game)throw new Error('Choose a game.');
+ const entries=buildGame(game.kind,items);
+ const perPage=game.kind==='cards'?6:8;
+ for(const [page,group] of chunks(entries,perPage).entries()){
+  const s=sheet(title,`${game.name} · Sheet ${page+1}`);
+  const content=el('div',undefined,game.kind==='cards'?'prompt-cards':'game-questions');
+  content.dataset.userContent='true';
+  group.forEach((entry,i)=>{const row=el('div',undefined,'game-entry');row.append(el('span',`${page*perPage+i+1}. ${entry.prompt}`));if(game.kind!=='cards')row.append(el('div',game.kind==='checklist'?'□  __________________________________':'__________________________________','answer-line'));content.append(row);});
+  s.append(content,el('p',game.kind==='cards'?'Cut along the borders. Read the game guide before playing.':'Name / team: ____________________','small'));sheets.push(s);
+ }
+ if(['quiz','scramble'].includes(game.kind))for(const group of chunks(entries.map((entry,i)=>({...entry,number:i+1})),8)){
+  const s=sheet(title,'Host copy · Keep separate from player sheets.',true);const key=el('div',undefined,'game-questions');key.dataset.userContent='true';for(const entry of group)key.append(el('p',`${entry.number}. ${entry.answer}`));s.append(key);sheets.push(s);
+ }
+ }
  currentSheets=sheets;currentPage=0;showPage();$('sheets').replaceChildren(...sheets);generated=true;$('preview-label').textContent='FRESH OFF THE PARTY PRESS';if(!isInitial)celebrate();$('print').disabled=false;$('status').className='status success';$('status').textContent=`Ready: ${sheets.length} printable sheets. Review before printing.`;
  }catch(error){$('status').className='status error';$('status').textContent=error.message;}};
 $('print').onclick=()=>{if(generated)window.print();};
@@ -23,4 +41,4 @@ $('privacy').setAttribute('aria-controls','privacy-panel');$('privacy').setAttri
 function showPage(){const sheet=currentSheets[currentPage];if(!sheet)return;$('preview').replaceChildren(cloneLocalized(sheet));$('page-number').textContent=`${currentPage+1} / ${currentSheets.length}`;$('previous').disabled=currentPage===0;$('next').disabled=currentPage===currentSheets.length-1;if(!matchMedia('(prefers-reduced-motion: reduce)').matches)$('preview').animate([{transform:'translateY(10px) rotate(-1deg)',opacity:.3},{transform:'translateY(0) rotate(0deg)',opacity:1}],{duration:320,easing:'cubic-bezier(.16,1,.3,1)'});}
 $('previous').onclick=()=>{if(currentPage>0){currentPage--;showPage();}};$('next').onclick=()=>{if(currentPage<currentSheets.length-1){currentPage++;showPage();}};
 function celebrate(){if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;const stage=$('celebration');stage.replaceChildren();for(let i=0;i<18;i++){const piece=document.createElement('i');piece.style.setProperty('--x',`${(i%6-2.5)*48}px`);piece.style.setProperty('--y',`${-100-(i%5)*26}px`);piece.style.setProperty('--r',`${i*43}deg`);piece.style.background=['#e66145','#eaba3e','#6d6090'][i%3];piece.addEventListener('animationend',()=>piece.remove(),{once:true});stage.append(piece);}}
-sample();$('generate').click();isInitial=false;
+const requestedGame=new URLSearchParams(location.search).get('game');if(requestedGame&&[...$('mode').options].some(option=>option.value===requestedGame)){$('mode').value=requestedGame;$('mode').onchange();}else sample();$('generate').click();isInitial=false;

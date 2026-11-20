@@ -61,3 +61,31 @@ test('both themes have readable tokens, mobile RTL layout, and reduced motion',a
   await page.locator('#site-language').selectOption('en');
  }
 });
+for(const game of ['charades','drawing','scavenger','conversation','trivia','scramble'])test(`new game ${game}: deep link, output, invalidation and print`,async({page},info)=>{
+ const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.goto(base+`?game=${game}&lang=en`);
+ await expect(page.locator('#mode')).toHaveValue(game);
+ await expect(page.locator('#print')).toBeEnabled();
+ expect(await page.locator('#sheets .print-sheet').count()).toBeGreaterThan(0);
+ if(['trivia','scramble'].includes(game)){
+  await expect(page.locator('#sheets .print-sheet').last()).toContainText('Answer key');
+  if(game==='trivia'){await expect(page.locator('#sheets .print-sheet').first()).not.toContainText('Carbon dioxide');await expect(page.locator('#sheets .print-sheet').last()).toContainText('Carbon dioxide');}
+ }
+ await page.locator('#title').fill('Guest <script> & friends');await expect(page.locator('#print')).toBeDisabled();
+ await page.locator('#generate').click();await expect(page.locator('#preview')).toContainText('Guest <script> & friends');
+ await page.emulateMedia({media:'print'});await expect(page.locator('.game-discovery')).toBeHidden();await expect(page.locator('[data-ad-slot]')).toBeHidden();
+ const pdf=await page.pdf({format:'A4'});expect(pdf.length).toBeGreaterThan(1000);await info.attach(`${game}.pdf`,{body:pdf,contentType:'application/pdf'});
+ expect(errors).toEqual([]);
+});
+test('new guides, game library and mobile layouts remain accessible',async({page})=>{
+ for(const path of ['games','charades','drawing','scavenger','conversation','trivia','scramble']){
+  await page.setViewportSize({width:320,height:900});await page.goto(base+path+'.html?lang=ar');
+  await expect(page.locator('article')).toHaveAttribute('lang','en');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
+  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href',`https://party-paper.onrender.com/${path}.html`);
+ }
+});
+test('new mode drafts survive switching and malformed trivia prevents printing',async({page})=>{
+ await page.goto(base+'?game=trivia&lang=en');await page.locator('#items').fill('Missing answer');await page.locator('#generate').click();await expect(page.locator('#status')).toContainText('question | answer');await expect(page.locator('#print')).toBeDisabled();
+ await page.locator('#mode').selectOption('conversation');await page.locator('#items').fill('My private prompt');await page.locator('#mode').selectOption('bingo');await page.locator('#mode').selectOption('conversation');await expect(page.locator('#items')).toHaveValue('My private prompt');
+});
