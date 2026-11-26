@@ -8,6 +8,12 @@ import { RoomStore } from '../.build/server/platform/server/store.js';
 import { LIMITS, ProtocolError, decodeClientFrame, object, alias, code, identifier, fail } from '../.build/server/contracts/protocol.js';
 
 const COOKIE='party_local';
+const clientFiles=new Map([
+  ['/local-room/', ['../review/local-room/index.html','text/html; charset=utf-8']],
+  ['/client/platform/client/index.js',['../.build/client/platform/client/index.js','text/javascript; charset=utf-8']],
+  ['/client/platform/client/room-client.js',['../.build/client/platform/client/room-client.js','text/javascript; charset=utf-8']],
+  ['/client/contracts/protocol.js',['../.build/client/contracts/protocol.js','text/javascript; charset=utf-8']]
+]);
 const getCookie=req=>{const matches=(req.headers.cookie??'').split(';').map(x=>x.trim()).filter(x=>x.startsWith(COOKIE+'='));return matches.length===1?matches[0].slice(COOKIE.length+1):null;};
 function sendJson(res,status,value){
   res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(value));
@@ -40,6 +46,10 @@ export async function startRoomServer({port=0,path=':memory:',now=Date.now,reset
     try{
       if(closing)fail('UNAVAILABLE');
       if(req.method==='GET'&&req.url==='/health'&&req.headers.host===new URL(origin).host){sendJson(res,200,{status:'ok',fixture:true});return;}
+      if(req.method==='GET'&&req.headers.host===new URL(origin).host&&clientFiles.has(req.url)){
+        const [relative,type]=clientFiles.get(req.url);const data=readFileSync(new URL(relative,import.meta.url));
+        res.writeHead(200,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'});res.end(data);return;
+      }
       if(req.method!=='POST'||!permitted(req))fail('FORBIDDEN');
       const t=Date.now();if(t-burst.at>=60000){burst.at=t;burst.count=0;}if(++burst.count>600)fail('RATE_LIMITED');
       const raw=getCookie(req);const data=await body(req);
