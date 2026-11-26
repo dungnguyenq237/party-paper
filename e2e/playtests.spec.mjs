@@ -7,13 +7,13 @@ async function staticPlaytests(){
  const paths=new Map(files.map(path=>['/party-paper/'+path.replace(/index\.html$/,''),path]));
  const server=createServer((req,res)=>{const path=paths.get(req.url);if(!path){res.writeHead(404).end();return;}const mime=path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'text/html';res.writeHead(200,{'content-type':mime+'; charset=utf-8'});res.end(readFileSync(new URL('../'+path,import.meta.url)));});
  await new Promise(ok=>server.listen(0,'127.0.0.1',ok));
- return {base:'http://127.0.0.1:'+server.address().port+'/party-paper/play/',close:()=>new Promise(ok=>server.close(ok))};
+ return {base:'http://127.0.0.1:'+server.address().port+'/party-paper/play/',close:()=>new Promise((ok,no)=>{server.getConnections((err,count)=>{console.log('[playtest teardown]',JSON.stringify({connections:err?'unknown':count}));server.close(e=>e?no(e):ok());server.closeAllConnections();});})};
 }
 async function fit(page,width){await page.setViewportSize({width,height:844});await page.evaluate(()=>document.fonts.ready);expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);}
 test('Friend Court: four complete hearings, replacement, private handoffs, scores and rematch',async({page},info)=>{
  const server=await staticPlaytests();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  try{
-  await page.goto(server.base+'friend-court/');await fit(page,320);await expect(page.getByRole('heading',{name:'Friend Court'})).toBeVisible();await page.screenshot({path:info.outputPath('friend-setup.png'),fullPage:true});
+  page.setDefaultTimeout(10000);await page.goto(server.base+'friend-court/');await fit(page,320);await expect(page.getByRole('heading',{name:'Friend Court'})).toBeVisible();await page.screenshot({path:info.outputPath('friend-setup.png'),fullPage:true,animations:'disabled',timeout:10000});
   await expect(page.locator('.game-scene[data-stage="setup"] .cast-slot')).toHaveCount(4);await expect(page.locator('#sound')).toHaveAttribute('aria-pressed','false');await page.locator('#start').click();await expect(page.locator('[data-role="judge"]')).toHaveAttribute('data-mood','speak');await page.locator('#replace').click();await expect(page.locator('#replace')).toBeDisabled();
   for(let i=0;i<4;i++){
    await page.locator('#accept').click();await expect(page.locator('.game-scene[data-stage="argument"] [data-mood="speak"]')).toHaveCount(1);
@@ -21,11 +21,11 @@ test('Friend Court: four complete hearings, replacement, private handoffs, score
    else await page.locator('#speak').click();
    await page.locator('#speak').click();
    for(let j=0;j<2;j++){await expect(page.locator('#reveal')).toBeVisible();await expect(page.locator('#vote-a')).toHaveCount(0);await expect(page.locator('.game-scene[data-private="true"] .cast-slot')).toHaveCount(1);await page.locator('#reveal').click();await page.locator(j===0?'#vote-a':'#vote-b').click();}
-   await expect(page.getByText('Shared point',{exact:true})).toBeVisible();await expect(page.locator('.game-scene')).toHaveAttribute('data-outcome','tie');await expect(page.locator('[data-role="advocateA"]')).toHaveAttribute('data-mood','celebrate');await expect(page.locator('[data-role="advocateB"]')).toHaveAttribute('data-mood','celebrate');if(i===0)await page.screenshot({path:info.outputPath('friend-verdict.png'),fullPage:true});
+   await expect(page.getByText('Shared point',{exact:true})).toBeVisible();await expect(page.locator('.game-scene')).toHaveAttribute('data-outcome','tie');await expect(page.locator('[data-role="advocateA"]')).toHaveAttribute('data-mood','celebrate');await expect(page.locator('[data-role="advocateB"]')).toHaveAttribute('data-mood','celebrate');if(i===0)await page.screenshot({path:info.outputPath('friend-verdict.png'),fullPage:true,animations:'disabled',timeout:10000});
    await page.locator('#next-hearing').click();
   }
   await expect(page.getByRole('heading',{name:'Final verdict'})).toBeVisible();await expect(page.locator('table td')).toHaveText(['2','2','2','2']);
-  await page.locator('#rematch').click();await expect(page.getByRole('heading',{name:'Hearing 1 / 4'})).toBeVisible();await page.locator('#language').click();await expect(page.locator('html')).toHaveAttribute('lang','vi');await fit(page,320);await page.screenshot({path:info.outputPath('friend-vi-320.png'),fullPage:true});expect(errors).toEqual([]);
+  console.log('[friend-court] completed 4 hearings and final scores');await page.locator('#rematch').click();await expect(page.getByRole('heading',{name:'Hearing 1 / 4'})).toBeVisible();await page.locator('#language').click();await expect(page.locator('html')).toHaveAttribute('lang','vi');await fit(page,320);await page.screenshot({path:info.outputPath('friend-vi-320.png'),fullPage:true,animations:'disabled',timeout:10000});expect(errors).toEqual([]);console.log('[playtest] browser assertions complete');
  }finally{await server.close();}
 });
 test('Corporate Chaos: four quarters, private commitments, audit, rankings and mobile VI',async({page},info)=>{
@@ -36,11 +36,11 @@ test('Corporate Chaos: four quarters, private commitments, audit, rankings and m
    await page.locator('#brief-next').click();
    for(let p=0;p<4;p++){await expect(page.locator('#reveal')).toBeVisible();await page.locator('#reveal').click();await expect(page.getByText('Your secret mandate',{exact:true})).toBeVisible();await expect(page.locator('.game-scene[data-private="true"] .cast-slot')).toHaveCount(1);await page.locator('#mandate-next').click();}
    await page.locator('#commit-orders').click();
-   for(let p=0;p<4;p++){await page.locator('#reveal').click();await expect(page.locator('#seal')).toBeDisabled();await page.locator('#plus-D').click();await page.locator('#plus-T').click();await expect(page.locator('#plus-V')).toBeDisabled();await expect(page.locator('.effort-pips [data-used="true"]')).toHaveCount(2);if(q===0&&p===0)await page.screenshot({path:info.outputPath('corporate-order.png'),fullPage:true});await page.locator('#seal').click();}
-   await expect(page.getByRole('heading',{name:'Project succeeds'})).toBeVisible();await expect(page.locator('.game-scene')).toHaveAttribute('data-outcome','success');await expect(page.locator('.cast-slot[data-mood="celebrate"]')).toHaveCount(4);await expect(page.getByText('Your secret mandate',{exact:false})).toHaveCount(0);if(q===0)await page.screenshot({path:info.outputPath('corporate-audit.png'),fullPage:true});await page.locator('#audit-next').click();
+   for(let p=0;p<4;p++){await page.locator('#reveal').click();await expect(page.locator('#seal')).toBeDisabled();await page.locator('#plus-D').click();await page.locator('#plus-T').click();await expect(page.locator('#plus-V')).toBeDisabled();await expect(page.locator('.effort-pips [data-used="true"]')).toHaveCount(2);if(q===0&&p===0)await page.screenshot({path:info.outputPath('corporate-order.png'),fullPage:true,animations:'disabled',timeout:10000});await page.locator('#seal').click();}
+   await expect(page.getByRole('heading',{name:'Project succeeds'})).toBeVisible();await expect(page.locator('.game-scene')).toHaveAttribute('data-outcome','success');await expect(page.locator('.cast-slot[data-mood="celebrate"]')).toHaveCount(4);await expect(page.getByText('Your secret mandate',{exact:false})).toHaveCount(0);if(q===0)await page.screenshot({path:info.outputPath('corporate-audit.png'),fullPage:true,animations:'disabled',timeout:10000});await page.locator('#audit-next').click();
   }
   await expect(page.getByRole('heading',{name:'Company survives'})).toBeVisible();await expect(page.locator('table tr')).toHaveCount(5);
-  await page.locator('#rematch').click();await page.locator('#language').click();await expect(page.locator('html')).toHaveAttribute('lang','vi');await fit(page,320);await page.screenshot({path:info.outputPath('corporate-vi-320.png'),fullPage:true});expect(errors).toEqual([]);
+  await page.locator('#rematch').click();await page.locator('#language').click();await expect(page.locator('html')).toHaveAttribute('lang','vi');await fit(page,320);await page.screenshot({path:info.outputPath('corporate-vi-320.png'),fullPage:true,animations:'disabled',timeout:10000});expect(errors).toEqual([]);
  }finally{await server.close();}
 });
 test('P1 actual browser controls use real local server and distinct sessions',async({browser})=>{
@@ -65,15 +65,15 @@ test('Visual stage: desktop artwork, actual animated gavel, manual motion and re
   await page.setViewportSize({width:1280,height:900});await page.goto(server.base+'friend-court/');
   await expect(page.locator('.game-scene svg.cast-svg')).toHaveCount(4);
   const arm=page.locator('[data-role="judge"] .cast-arm-right');await expect(arm).toHaveCSS('animation-name','cast-gavel');
-  await page.screenshot({path:info.outputPath('visual-court-desktop.png'),animations:'disabled',fullPage:true});
+  await page.screenshot({path:info.outputPath('visual-court-desktop.png'),animations:'disabled',fullPage:true,timeout:10000});
   await page.locator('#motion').click();await expect(page.locator('body')).toHaveAttribute('data-motion','off');await expect(arm).toHaveCSS('animation-name','none');
   await page.locator('#motion').click();await expect(arm).toHaveCSS('animation-name','cast-gavel');
   await page.locator('#start').click();await expect(page.locator('.game-scene')).toHaveAttribute('data-stage','brief');
   await page.locator('#accept').click();await expect(page.locator('.game-scene [data-mood="speak"] .cast-mouth')).toHaveCSS('animation-name','cast-talk');
   await page.emulateMedia({reducedMotion:'reduce',colorScheme:'dark'});await fit(page,320);
   await expect(page.locator('.game-scene [data-mood="speak"] .cast-mouth')).toHaveCSS('animation-name','none');
-  await page.screenshot({path:info.outputPath('visual-court-dark-320.png'),animations:'disabled',fullPage:true});
+  await page.screenshot({path:info.outputPath('visual-court-dark-320.png'),animations:'disabled',fullPage:true,timeout:10000});
   await page.goto(server.base+'corporate-chaos/');await expect(page.locator('body')).toHaveAttribute('data-motion','off');await expect(page.locator('.cast-svg')).toHaveCount(4);
-  await fit(page,390);await page.screenshot({path:info.outputPath('visual-office-dark-390.png'),animations:'disabled',fullPage:true});expect(errors).toEqual([]);
+  await fit(page,390);await page.screenshot({path:info.outputPath('visual-office-dark-390.png'),animations:'disabled',fullPage:true,timeout:10000});expect(errors).toEqual([]);
  }finally{await server.close();}
 });
