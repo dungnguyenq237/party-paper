@@ -6,7 +6,6 @@ import type { Ack, Command, ErrorCode, ErrorFrame, Snapshot } from '../../contra
 import { apply, member, phaseId, progress, project, recover } from './room-state.js';
 import type { Member, Room } from './room-state.js';
 export type Principal={roomId:string;session:string;generation:number};
-type Row=Record<string,unknown>;
 type Clock=()=>number;
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 const secret=()=>randomBytes(32).toString('base64url');
