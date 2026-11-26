@@ -32,6 +32,8 @@ export async function startRoomServer({port=0,path=':memory:',now=Date.now,reset
   const wss=new WebSocketServer({noServer:true,maxPayload:LIMITS.frameBytes,perMessageDeflate:false,clientTracking:true});
   const sockets=new Map();const burst={at:Date.now(),count:0};let origin='';
   let closing=false;
+  const dirty=new Set();
+  const markDirty=roomId=>dirty.add(roomId);
   function permitted(req){return req.headers.host===new URL(origin).host&&req.headers.origin===origin;}
   let sentBytes=0,sentFrames=0;
   function send(ws,value){if(ws.readyState!==WebSocket.OPEN)return;const encoded=JSON.stringify(value);if(ws.bufferedAmount+Buffer.byteLength(encoded)>65536){ws.terminate();return;}sentBytes+=Buffer.byteLength(encoded);sentFrames++;ws.send(encoded);}
@@ -98,16 +100,17 @@ export async function startRoomServer({port=0,path=':memory:',now=Date.now,reset
         }
         if(frame.type==='hello')fail();
         if(frame.type==='resync'){const v=store.view(state.principal);state.rev=v.rev;send(ws,v);return;}
-        const ack=store.command(state.principal,frame);send(ws,ack);publish(state.principal.roomId);
+        const ack=store.command(state.principal,frame);send(ws,ack);markDirty(state.principal.roomId);
       }catch(e){const c=safeCode(e);send(ws,error(c,frame?.type==='command'?frame.commandId:null));if(c==='FORBIDDEN'||c==='RATE_LIMITED'||c==='UNAVAILABLE'||!state.principal)ws.close(1008,'Rejected');}
     });
     ws.on('close',()=>{clearTimeout(timer);sockets.delete(ws);if(state.principal&&!closing){try{store.detach(state.principal);publish(state.principal.roomId);}catch{/* no private diagnostics */}}});
   });
   await new Promise((ok,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',()=>{server.off('error',no);ok();});});
   origin='http://127.0.0.1:'+server.address().port;
+  const flush=setInterval(()=>{for(const id of dirty){dirty.delete(id);publish(id);}},25);
   const tick=setInterval(()=>{try{store.tick();publish();}catch{for(const ws of sockets.keys())ws.terminate();}},250);
   const heartbeat=setInterval(()=>{for(const [ws,s] of sockets){if(!s.alive){ws.terminate();continue;}s.alive=false;ws.ping();}},LIMITS.heartbeatMs);
-  return {origin,store,metrics:()=>({sentBytes,sentFrames,connections:sockets.size}),async close(){if(closing)return;closing=true;clearInterval(tick);clearInterval(heartbeat);for(const ws of sockets.keys())ws.terminate();await new Promise(ok=>wss.close(ok));await new Promise(ok=>server.close(ok));store.close();}};
+  return {origin,store,metrics:()=>({sentBytes,sentFrames,connections:sockets.size}),async close(){if(closing)return;closing=true;clearInterval(flush);clearInterval(tick);clearInterval(heartbeat);for(const ws of sockets.keys())ws.terminate();await new Promise(ok=>wss.close(ok));await new Promise(ok=>server.close(ok));store.close();}};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
   const path=resolve('data/local-rooms.sqlite');mkdirSync(dirname(path),{recursive:true});
