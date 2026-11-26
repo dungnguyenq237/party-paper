@@ -41,13 +41,13 @@ function elect(r:Room,now:number):boolean {
 export function progress(r:Room,now:number):boolean {
   let changed=elect(r,now);
   if(r.status==='active'){
+    if(r.deadlineAt!==null&&now>=r.deadlineAt){finish(r,'deadline',now);return true;}
     const grace=eligible(r).filter(s=>s.connected||now-s.disconnectedAt<2*LIMITS.heartbeatMs).length;
     if(grace<LIMITS.minSeats){
       if(r.pauseUsed){finish(r,'quorum',now);return true;}
       r.remainingMs=Math.max(0,(r.deadlineAt??now)-now);r.status='paused';r.phase++;r.pauseUsed=true;
       r.deadlineAt=Math.min(r.expiresAt,now+LIMITS.reconnectMs);return true;
     }
-    if(r.deadlineAt!==null&&now>=r.deadlineAt){finish(r,'deadline',now);return true;}
   }else if(r.status==='paused'){
     if(r.deadlineAt!==null&&now>=r.deadlineAt){finish(r,r.recovering?'recovery':'quorum',now);return true;}
     if(connected(r).length>=LIMITS.minSeats){
