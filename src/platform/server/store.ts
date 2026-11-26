@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { createHash, randomBytes, randomInt, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { LIMITS, ProtocolError, fail, semanticCommand, decodeServerFrame } from '../../contracts/protocol.js';
+import { LIMITS, ProtocolError, fail, semanticCommand, decodeServerFrame, object, identifier, code, alias, integer, boolean } from '../../contracts/protocol.js';
 import type { Ack, Command, ErrorCode, ErrorFrame, Snapshot } from '../../contracts/protocol.js';
 import { apply, member, phaseId, progress, project, recover } from './room-state.js';
 import type { Member, Room } from './room-state.js';
@@ -11,12 +11,40 @@ const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 const secret=()=>randomBytes(32).toString('base64url');
 const error=(code:ErrorCode,commandId:string|null=null):ErrorFrame=>({v:1,type:'error',code,commandId});
 const schema=readFileSync(new URL('../../../../migrations/001_rooms.sql',import.meta.url),'utf8');
+// Validate the full persisted v1 shape before using any member or private value.
 function unpack(value:unknown):Room {
-  if(typeof value!=='string')throw new Error('Invalid room record');
-  const r=JSON.parse(value) as Room;
-  // Only this synthetic engine and its persisted schema are supported.
-  if(r.schema!==1||!Array.isArray(r.seats)||r.seats.length>LIMITS.seats||!Number.isSafeInteger(r.rev)||!Number.isSafeInteger(r.expiresAt)||!['lobby','active','paused','results','abandoned'].includes(r.status))throw new Error('Unsupported room snapshot');
-  return r;
+  try {
+    if(typeof value!=='string'||Buffer.byteLength(value)>64*1024)throw Error();
+    const r=JSON.parse(value) as Room;
+    object(r,['schema','id','code','matchId','phase','rev','status','hostSeatId','seats','deadlineAt','expiresAt','pauseUsed','remainingMs','recovering','itemVersion','claimedBy','result','privateSeed']);
+    if(r.schema!==1||!Array.isArray(r.seats)||r.seats.length<1||r.seats.length>LIMITS.seats)throw Error();
+    identifier(r.id);code(r.code);identifier(r.matchId);identifier(r.privateSeed);
+    for(const n of [r.phase,r.rev,r.expiresAt,r.remainingMs,r.itemVersion])integer(n);
+    boolean(r.pauseUsed);boolean(r.recovering);
+    if(r.phase<1||r.rev<1||r.itemVersion>1||r.remainingMs>45000)throw Error();
+    const ids=new Set<string>(),sessions=new Set<string>();
+    for(const m of r.seats){
+      object(m,['id','session','alias','ready','connected','disconnectedAt','generation','revoked','choice']);
+      identifier(m.id);alias(m.alias);integer(m.disconnectedAt);integer(m.generation);
+      boolean(m.ready);boolean(m.connected);boolean(m.revoked);
+      if(typeof m.session!=='string'||!/^[a-f0-9]{64}$/.test(m.session)||ids.has(m.id)||sessions.has(m.session)||(m.revoked&&m.connected)||![null,'amber','violet'].includes(m.choice))throw Error();
+      ids.add(m.id);sessions.add(m.session);
+    }
+    if(r.hostSeatId!==null&&!ids.has(r.hostSeatId))throw Error();
+    if(r.claimedBy!==null&&!ids.has(r.claimedBy))throw Error();
+    if((r.itemVersion===0)!==(r.claimedBy===null))throw Error();
+    const timed=r.status==='active'||r.status==='paused';
+    const terminal=r.status==='results'||r.status==='abandoned';
+    if(!timed&&!terminal&&r.status!=='lobby')throw Error();
+    if(timed?(r.deadlineAt===null||integer(r.deadlineAt)>r.expiresAt):r.deadlineAt!==null)throw Error();
+    if(terminal!==(r.result!==null)||r.recovering&&r.status!=='paused')throw Error();
+    if(r.result&&r.result.amber+r.result.violet>r.seats.length)throw Error();
+    if(r.status==='lobby'&&r.seats.some(m=>m.choice!==null))throw Error();
+    // Reuse wire validation for the remaining public discriminants and fields.
+    const first=r.seats[0];if(!first)throw Error();
+    decodeServerFrame(project(r,first,0));
+    return r;
+  } catch { throw new Error('Unsupported room snapshot'); }
 }
 export class RoomStore {
   private readonly db:DatabaseSync;
@@ -31,13 +59,13 @@ export class RoomStore {
         if(resetTransient){this.db.exec('DELETE FROM rooms; DELETE FROM sessions;');return;}
         const now=this.now();this.cleanup(now);
         this.db.exec('DELETE FROM tickets');
-        for(const row of this.db.prepare('SELECT state FROM rooms').all()){const r=unpack(row.state);recover(r,now);this.save(r);}
+        for(const row of this.db.prepare('SELECT id FROM rooms').all()){const r=this.load(String(row.id));recover(r,now);this.save(r);}
       });
     }catch(e){this.db.close();throw e;}
   }
   close():void{this.db.close();}
-  private tx<T>(f:()=>T):T{this.db.exec('BEGIN IMMEDIATE');try{const v=f();this.db.exec('COMMIT');return v;}catch(e){this.db.exec('ROLLBACK');throw e;}}
-  private load(roomId:string):Room{const row=this.db.prepare('SELECT state FROM rooms WHERE id=? AND expires_at>?').get(roomId,this.now());if(!row)fail('EXPIRED');return unpack(row.state);}
+  private tx<T>(f:()=>T):T{this.db.exec('BEGIN IMMEDIATE');try{const v=f();this.db.exec('COMMIT');return v;}catch(e){try{this.db.exec('ROLLBACK');}catch{/* preserve original failure */}throw e;}}
+  private load(roomId:string):Room{const row=this.db.prepare('SELECT state,code,expires_at FROM rooms WHERE id=? AND expires_at>?').get(roomId,this.now());if(!row)fail('EXPIRED');const r=unpack(row.state);if(r.id!==roomId||r.code!==row.code||r.expiresAt!==row.expires_at)throw new Error('Inconsistent room record');return r;}
   private save(r:Room):void{this.db.prepare('UPDATE rooms SET state=?, expires_at=? WHERE id=?').run(JSON.stringify(r),r.expiresAt,r.id);}
   private touch(r:Room):void{r.rev++;this.save(r);}
   private ensureSession(session:string):void{if(!this.db.prepare('SELECT 1 FROM sessions WHERE id=? AND expires_at>?').get(session,this.now()))fail('FORBIDDEN');}
@@ -111,10 +139,11 @@ export class RoomStore {
       try{
         if(apply(r,s,c.action,now,randomUUID))this.touch(r);
       }catch(e){if(e instanceof ProtocolError)return error(e.code,c.commandId);throw e;}
-      if(c.action.kind==='rematch')this.db.prepare('DELETE FROM receipts WHERE room_id=? AND match_id<>?').run(r.id,c.matchId);
+      // Keep only the transition receipt from the prior epoch; old votes must not be retried into a new match.
+      if(c.action.kind==='start'||c.action.kind==='rematch')this.db.prepare('DELETE FROM receipts WHERE room_id=? AND match_id<>?').run(r.id,r.matchId);
       this.db.prepare('INSERT INTO receipts(room_id,match_id,seat_id,command_id,digest,accepted_rev) VALUES(?,?,?,?,?,?)').run(r.id,c.matchId,s.id,c.commandId,digest,r.rev);
       return {v:1,type:'ack',matchId:c.matchId,commandId:c.commandId,acceptedRev:r.rev};
     });
   }
-  tick():void{this.tx(()=>{const now=this.now();this.cleanup(now);for(const row of this.db.prepare('SELECT state FROM rooms').all()){const r=unpack(row.state);if(progress(r,now))this.touch(r);}});}
+  tick():void{this.tx(()=>{const now=this.now();this.cleanup(now);for(const row of this.db.prepare('SELECT id FROM rooms').all()){const r=this.load(String(row.id));let changed=false;for(const seat of r.seats){if(!seat.revoked&&!this.db.prepare('SELECT 1 FROM sessions WHERE id=?').get(seat.session)){seat.revoked=true;seat.connected=false;seat.ready=false;seat.generation++;seat.disconnectedAt=now;changed=true;}}if(progress(r,now)||changed)this.touch(r);}});}
 }
