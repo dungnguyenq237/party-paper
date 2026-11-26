@@ -15,10 +15,10 @@ function render():void{
  const v=last.view;document.documentElement.lang=locale;lang.textContent=locale==='en'?'Tiếng Việt':'English';
  for(const el of document.querySelectorAll<HTMLElement>('[data-copy]'))el.textContent=tr(el.dataset.copy??'');
  status.textContent=tr(last.connection);feedback.textContent=last.feedback;
+ const focused=document.activeElement instanceof HTMLElement?document.activeElement.dataset.action:undefined;
  form.hidden=v!==null;root.replaceChildren();timer.hidden=!v||v.deadlineAt===null;
  if(!v){form.querySelectorAll<HTMLButtonElement>('button').forEach(b=>b.disabled=last.connection==='connecting');return;}
  if(v.rev!==clockRev){clockRev=v.rev;clockBase=performance.now();}
- const focused=document.activeElement instanceof HTMLElement?document.activeElement.dataset.action:undefined;
  root.append(node('h2',tr('Room')+' '+v.code+' · '+tr(v.status)),node('p',tr('Role')+': '+tr(v.self.canHost?'Host':'Player')));
  const list=document.createElement('ul');for(const seat of v.seats)if(!seat.revoked)list.append(node('li',seat.alias+' · '+tr(seat.connected?'Online':'Offline')+(seat.ready?' · '+tr('Ready'):'')+(seat.id===v.hostSeatId?' · '+tr('Host'):'')));root.append(list);
  const actions=document.createElement('div');actions.className='actions';
