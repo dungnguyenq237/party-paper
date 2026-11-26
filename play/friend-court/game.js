@@ -19,7 +19,7 @@ function newGame(names,api,rematch=false){
 function begin(api){
  const n=state.names.length,a=(state.i+rotation)%n,b=(a+1)%n;
  state.current={a,b,clerk:(b+1)%n,jury:Array.from({length:n},(_,i)=>i).filter(i=>i!==a&&i!==b),
-  docket:state.deck.shift(),replaced:false,args:{},order:state.i%2?[b,a]:[a,b],argIndex:0,votes:[],ballotIndex:0};
+  docket:state.deck.shift(),replaced:false,args:{},order:state.i%2?[b,a]:[a,b],argIndex:0,draft:'',votes:[],ballotIndex:0};
  state.stage='brief';api.redraw();
 }
 function brief(api){
@@ -36,7 +36,7 @@ function argumentsView(api){
 function accept(api){api.clearClock();state.stage='argument';api.redraw();}
 function submitArgument(api,kind,text=''){
  if(state.stage!=='argument')return;
- api.clearClock();const c=state.current,p=c.order[c.argIndex];c.args[p]={kind,text,hidden:false};c.argIndex++;
+ api.clearClock();const c=state.current,p=c.order[c.argIndex];c.args[p]={kind,text,hidden:false};c.argIndex++;c.draft='';
  if(c.argIndex<2){api.redraw();return;}
  if(c.args[c.a].kind==='pass'&&c.args[c.b].kind==='pass'){finish(api);return;}
  state.stage='jury';api.redraw();
@@ -53,8 +53,8 @@ function render(api){
  }
  if(state.stage==='argument'){
   const p=c.order[c.argIndex],side=p===c.a?'A':'B',copy=dockets[c.docket][api.lang];api.timer('arg-'+state.i+'-'+c.argIndex,25,()=>submitArgument(api,'pass'));
-  const area=el('textarea');area.id='argument';area.maxLength=180;area.placeholder=w('argHelp');
-  const send=button(w('submit'),()=>{const text=area.value.trim();if(text)submitArgument(api,'text',[...text].slice(0,180).join(''));},{id:'submit-text',disabled:true});area.oninput=()=>{send.disabled=!area.value.trim();};
+  const area=el('textarea');area.id='argument';area.maxLength=180;area.value=c.draft;area.placeholder=w('argHelp');
+  const send=button(w('submit'),()=>{const text=area.value.trim();if(text)submitArgument(api,'text',[...text].slice(0,180).join(''));},{id:'submit-text',disabled:!area.value.trim()});area.oninput=()=>{c.draft=area.value;send.disabled=!area.value.trim();};
   api.show(...base(),argumentsView(api),panel(w('arg')+' · '+state.names[p]+' ('+side+')',el('p',w('remedy')+': '+copy[side==='A'?2:3]),el('p',w('argHelp'),'muted'),label(w('argLabel'),area),group(button(w('spoken'),()=>submitArgument(api,'speak'),{id:'speak'}),send,button(w('pass'),()=>submitArgument(api,'pass'),{secondary:true,id:'pass'}))));return;
  }
  if(state.stage==='jury'){
