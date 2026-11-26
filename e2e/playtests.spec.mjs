@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 import {createServer} from 'node:http';
 import {readFileSync} from 'node:fs';
 import {startRoomServer} from '../scripts/room-server.mjs';
-const files=['play/index.html','play/shared/ui.js','play/shared/style.css','play/shared/rules.js','play/friend-court/index.html','play/friend-court/game.js','play/friend-court/dockets.js','play/corporate-chaos/index.html','play/corporate-chaos/game.js'];
+const files=['play/index.html','play/shared/ui.js','play/shared/style.css','play/shared/rules.js','play/shared/scene.js','play/shared/scene.css','play/friend-court/index.html','play/friend-court/game.js','play/friend-court/dockets.js','play/corporate-chaos/index.html','play/corporate-chaos/game.js'];
 async function staticPlaytests(){
  const paths=new Map(files.map(path=>['/party-paper/'+path.replace(/index\.html$/,''),path]));
  const server=createServer((req,res)=>{const path=paths.get(req.url);if(!path){res.writeHead(404).end();return;}const mime=path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'text/html';res.writeHead(200,{'content-type':mime+'; charset=utf-8'});res.end(readFileSync(new URL('../'+path,import.meta.url)));});
