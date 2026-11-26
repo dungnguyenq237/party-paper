@@ -90,7 +90,7 @@ function render(api){
   const r=c.result,award=r.a&&r.b?w('tie'):r.a||r.b?w('winner')+' '+state.names[r.a?c.a:c.b]:w('noScore');
   const stats=el('div','','stats');stats.append(stat('A',r.A),stat('B',r.B),stat(w('abstain'),r.abstain));
   const next=()=>{if(state.i+1>=state.names.length){state.stage='final';previousIds=[...new Set([...previousIds,...state.history.map(x=>x.docket)])];api.redraw();}else{state.i++;begin(api);}};
-  api.show(...base(),panel(w('verdict'),el('p',award,'stamp'),stats,button(state.i+1>=state.names.length?w('result'):w('nextHearing'),next,{id:'next-hearing'})));return;
+  const [heading,docket]=base();api.show(heading,panel(w('verdict'),el('p',award,'stamp'),stats,button(state.i+1>=state.names.length?w('result'):w('nextHearing'),next,{id:'next-hearing'})),docket);return;
  }
  if(state.stage==='final'){
   const order=state.names.map((name,i)=>({name,score:state.scores[i]})).sort((a,b)=>b.score-a.score);
