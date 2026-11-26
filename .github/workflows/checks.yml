@@ -25,6 +25,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build:live
       - run: npm run check:public
+      - run: node --test tests/live/*.test.mjs
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - uses: actions/upload-artifact@v5
