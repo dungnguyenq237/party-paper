@@ -5,7 +5,11 @@
       "ES2022"
     ],
     "rootDir": "src",
-    "outDir": ".build/server"
+    "outDir": ".build/server",
+    "types": [
+      "node"
+    ],
+    "skipLibCheck": true
   },
   "include": [
     "src/platform/server/**/*.ts",
