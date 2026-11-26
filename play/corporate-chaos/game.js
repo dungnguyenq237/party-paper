@@ -1,3 +1,4 @@
+import {scene} from '../shared/scene.js';
 import {createShell,el,button,group,panel,grid,stat,rules,shuffled} from '../shared/ui.js';
 import {roles,departments,events,targets,validateOrder,auditQuarter,rank} from '../shared/rules.js';
 
@@ -15,7 +16,7 @@ function start(names,api){
  state={players:names.map((name,i)=>({name,role:roleDeck[i],mandate:departments[crypto.getRandomValues(new Uint32Array(1))[0]%3],credits:1,prestige:0,used:false,earned:[0,0,0],successfulWork:0})),runway:2,q:0,stage:'brief',index:0,orders:[],history:[],draft:null};
  api.redraw();
 }
-function stats(api){const n=el('div','','stats');const [d,t]=targets(state.players.length,events[state.q]);n.append(stat(tr(api,'runway'),state.runway+' / 4'),stat(dept(api,'D'),d),stat(dept(api,'T'),t));return n;}
+function stats(api){const n=el('div','','stats');const [d,t]=targets(state.players.length,events[state.q]);const runway=stat(tr(api,'runway'),state.runway+' / 4');runway.append(runwayTrack(state.runway,tr(api,'runway')));n.append(runway,stat(dept(api,'D'),d),stat(dept(api,'T'),t));return n;}
 function brief(api){const w=copy(api);const rolesList=el('ul','','list');for(const p of state.players)rolesList.append(el('li',p.name+' · '+role(api,p.role)));
  return [api.heading(tr(api,'quarter')+' '+(state.q+1)+' / 4',w.event[events[state.q]]),stats(api),panel(tr(api,'brief'),el('p',api.lang==='en'?'Featured department: '+dept(api,departments[state.q%2]):'Bộ phận trọng tâm: '+dept(api,departments[state.q%2])),rolesList)];}
 function prepareOrders(api){api.clearClock();state.index=0;state.orders=[];state.stage='handoff';state.draft=null;api.redraw();}
@@ -27,6 +28,16 @@ function finishOrder(api,order){
  else{state.stage='handoff';state.draft=null;}
  api.redraw();
 }
+function companyScene(api){
+ const stage=state.stage,vi=api.lang==='vi',privateView=['mandate-handoff','mandate','handoff','order'].includes(stage);
+ const progress={current:state.q+1,total:4,label:tr(api,'quarter')+' '+(state.q+1)+' / 4'};
+ if(privateView){const p=state.players[state.index];const board=scene({theme:'corporate',stage,headline:vi?'HỒ SƠ RIÊNG':'PRIVATE WORKSTATION',privateView:true,progress,cast:[{role:p.role,mood:stage==='order'?'think':'idle',label:p.name,caption:role(api,p.role)}]});board.dataset.cue=stage+'-'+state.q+'-'+state.index;return board;}
+ const audit=stage==='audit'?state.history.at(-1):null,outcome=audit?(audit.success?'success':'failure'):stage==='results'?(state.runway>0?'success':'failure'):null;
+ const headline=stage==='audit'?(vi?'KIỂM TOÁN':'QUARTERLY AUDIT'):stage==='results'?(vi?'TỔNG KẾT':'FINAL REVIEW'):stage==='negotiate'?(vi?'THƯƠNG LƯỢNG':'STRATEGY MEETING'):(vi?'KẾ HOẠCH QUÝ':'THE QUARTERLY BRIEF');
+ const board=scene({theme:'corporate',stage,headline,progress,outcome,cast:roles.map(r=>{const p=state.players.find(x=>x.role===r);return {role:r,label:p?.name??role(api,r),caption:role(api,r),mood:outcome==='success'?'celebrate':outcome==='failure'?'sad':stage==='negotiate'?(r==='Lead'?'speak':'think'):'idle'};})});board.dataset.cue=stage+'-'+state.q;return board;
+}
+function runwayTrack(value,label){const track=el('div','','runway-track');track.setAttribute('role','img');track.setAttribute('aria-label',label+' '+value+' / 4');for(let i=0;i<4;i++){const pip=el('i');pip.dataset.filled=String(i<value);track.append(pip);}return track;}
+function effortPips(remaining){const track=el('div','','effort-pips');track.setAttribute('aria-hidden','true');for(let i=0;i<2;i++){const pip=el('i');pip.dataset.used=String(i>=remaining);track.append(pip);}return track;}
 function render(api){
  const w=copy(api),t=k=>tr(api,k),event=events[state.q];
  if(state.stage==='brief'){
@@ -58,14 +69,14 @@ function render(api){
   const canPower=!p.used&&(p.role!=='Engineer'||draft.units[2]>0);
   const power=button(draft.power?t('disable'):t('activate'),()=>{draft.power=!draft.power;api.redraw();},{secondary:true,disabled:!canPower,id:'power'});power.setAttribute('aria-pressed',String(draft.power));
   const top=el('div','','stats');top.append(stat(t('credits'),p.credits),stat(t('prestige'),p.prestige),stat(t('remaining'),remaining));
-  api.show(api.heading(p.name+' · '+t('quarter')+' '+(state.q+1),t('order'),true),stats(api),panel(t('mandate')+': '+dept(api,p.mandate),el('p',t('role')+': '+role(api,p.role)),top,controls,el('p',w.powers[p.role]+' · '+t(p.used?'used':'available'),'muted'),power,group(button(t('seal'),()=>finishOrder(api,{units:[...draft.units],power:draft.power}),{disabled:!validateOrder(draft,p),id:'seal'}),button(t('default'),()=>finishOrder(api,null),{secondary:true,id:'default'}))));return;
+  api.show(api.heading(p.name+' · '+t('quarter')+' '+(state.q+1),t('order'),true),stats(api),panel(t('mandate')+': '+dept(api,p.mandate),el('p',t('role')+': '+role(api,p.role)),top,effortPips(remaining),controls,el('p',w.powers[p.role]+' · '+t(p.used?'used':'available'),'muted'),power,group(button(t('seal'),()=>finishOrder(api,{units:[...draft.units],power:draft.power}),{disabled:!validateOrder(draft,p),id:'seal'}),button(t('default'),()=>finishOrder(api,null),{secondary:true,id:'default'}))));return;
  }
  if(state.stage==='audit'){
   const a=state.history.at(-1),totals=el('div','','stats');
   departments.forEach((d,i)=>totals.append(stat(dept(api,d),a.totals[i]+(i<2?' / '+a.target[i]:''))));
   const rolesUsed=a.powers.map(r=>role(api,r)).join(', ')||'—';
   const terminal=state.runway===0||state.q===3;
-  api.show(api.heading(t('audit')+' · '+t('quarter')+' '+(state.q+1),w.event[event]),panel(t(a.success?'success':'failure'),el('p',t('runway')+': '+state.runway+' / 4','stamp'),el('h3',t('total')),totals,el('p',t('power')+': '+rolesUsed),button(t(terminal?'end':'next'),()=>{if(terminal)state.stage='results';else{state.q++;state.stage='brief';}api.redraw();},{id:'audit-next'})));return;
+  api.show(api.heading(t('audit')+' · '+t('quarter')+' '+(state.q+1),w.event[event]),panel(t(a.success?'success':'failure'),el('p',t('runway')+': '+state.runway+' / 4','stamp'),runwayTrack(state.runway,t('runway')),el('h3',t('total')),totals,el('p',t('power')+': '+rolesUsed),button(t(terminal?'end':'next'),()=>{if(terminal)state.stage='results';else{state.q++;state.stage='brief';}api.redraw();},{id:'audit-next'})));return;
  }
  if(state.stage==='results'){
   const sorted=rank(state.players),leaders=sorted.filter(p=>p.score===sorted[0].score&&p.successfulWork===sorted[0].successfulWork).map(p=>p.name).join(', ');
@@ -75,4 +86,4 @@ function render(api){
   api.show(api.heading(t(state.runway>0?'survived':'insolvent'),api.tr('complete')),panel(state.runway>0?t('winner'):'',state.runway>0?el('p',leaders,'stamp'):el('p',t('insolvent')),table,timeline,group(button(api.tr('rematch'),()=>start(state.players.map(p=>p.name),api),{id:'rematch'}),button(api.tr('reset'),api.setup,{secondary:true}))));return;
  }
 }
-const shell=createShell({title:{en:'Corporate Chaos',vi:'Công ty hỗn loạn'},description:{en:'Keep a fictitious company alive for four quarters while pursuing a private promotion goal. Negotiate, seal two effort points, then audit the result.',vi:'Giữ công ty hư cấu sống sót qua bốn quý trong khi theo đuổi mục tiêu thăng tiến bí mật. Thương lượng, gửi hai điểm nỗ lực, rồi kiểm toán.'},theme:'corporate',onStart:start,onRender:render});shell.rules={en:words.en.rules,vi:words.vi.rules};shell.redraw();
+const shell=createShell({title:{en:'Corporate Chaos',vi:'Công ty hỗn loạn'},description:{en:'Keep a fictitious company alive for four quarters while pursuing a private promotion goal. Negotiate, seal two effort points, then audit the result.',vi:'Giữ công ty hư cấu sống sót qua bốn quý trong khi theo đuổi mục tiêu thăng tiến bí mật. Thương lượng, gửi hai điểm nỗ lực, rồi kiểm toán.'},theme:'corporate',onStart:start,onRender:render,getScene:companyScene});shell.rules={en:words.en.rules,vi:words.vi.rules};shell.redraw();

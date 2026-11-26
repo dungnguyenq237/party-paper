@@ -1,3 +1,4 @@
+import {scene} from '../shared/scene.js';
 import {createShell,el,button,group,panel,grid,list,stat,label,rules,shuffled} from '../shared/ui.js';
 import {hearingScore} from '../shared/rules.js';
 import {dockets} from './dockets.js';
@@ -44,6 +45,24 @@ function submitArgument(api,kind,text=''){
 function finish(api){api.clearClock();const c=state.current;const result=hearingScore(c.args[c.a]?.kind!=='pass',c.args[c.b]?.kind!=='pass',c.votes);
  state.scores[c.a]+=result.a;state.scores[c.b]+=result.b;c.result=result;state.history.push({docket:c.docket,result});state.stage='verdict';api.redraw();
 }
+function courtScene(api){
+ const c=state.current,vi=api.lang==='vi',stage=state.stage;
+ const hearing=t(api,'hearing')+' '+(state.i+1)+' / '+state.names.length;
+ const progress={current:state.i+1,total:state.names.length,label:hearing};
+ const privateView=stage==='jury'||stage==='ballot';
+ if(privateView){const board=scene({theme:'court',stage,cast:[{role:'jury',mood:stage==='ballot'?'think':'idle',label:vi?'Bồi thẩm':'Juror'}],headline:vi?'PHIẾU KÍN · CHỈ BẠN':'SEALED BALLOT · YOUR VIEW',privateView:true,progress});board.dataset.cue=stage+'-'+state.i+'-'+c.ballotIndex;return board;}
+ const aMood=stage==='argument'?(c.order[c.argIndex]===c.a?'speak':'think'):stage==='verdict'?(c.result.a?'celebrate':c.result.b?'sad':'idle'):'idle';
+ const bMood=stage==='argument'?(c.order[c.argIndex]===c.b?'speak':'think'):stage==='verdict'?(c.result.b?'celebrate':c.result.a?'sad':'idle'):'idle';
+ const judgeMood=stage==='brief'?'speak':stage==='verdict'||stage==='final'?'celebrate':'idle';
+ const outcome=stage==='verdict'?(c.result.a&&c.result.b?'tie':c.result.a||c.result.b?'success':'neutral'):stage==='final'?'success':null;
+ const headline=stage==='brief'?(vi?'MỞ PHIÊN XỬ':'COURT IN SESSION'):stage==='argument'?(vi?'TRANH LUẬN':'THE ARGUMENTS'):stage==='verdict'?(vi?'TUYÊN ÁN':'THE VERDICT'):vi?'KẾT THÚC':'COURT ADJOURNED';
+ const board=scene({theme:'court',stage,headline,progress,outcome,cast:[
+ {role:'advocateA',mood:aMood,label:state.names[c.a],caption:vi?'Bên A':'Advocate A'},
+ {role:'judge',mood:judgeMood,label:vi?'Thẩm phán':'Judge',caption:vi?'Phiên xử':'Presiding'},
+ {role:'advocateB',mood:bMood,label:state.names[c.b],caption:vi?'Bên B':'Advocate B'},
+ {role:'jury',mood:stage==='argument'?'react':stage==='verdict'?'celebrate':'idle',label:vi?'Bồi thẩm đoàn':'Jury',caption:state.names.length-2+' '+(vi?'người':'jurors')}
+ ]});board.dataset.cue=stage+'-'+state.i+'-'+c.argIndex;return board;
+}
 function render(api){
  const c=state.current,w=k=>t(api,k),base=()=>brief(api);
  if(state.stage==='brief'){
@@ -80,4 +99,4 @@ function render(api){
   api.show(api.heading(w('final'),api.tr('complete')),panel(w('leaders'),el('p',top,'stamp'),table,group(button(api.tr('rematch'),()=>{rotation=(rotation+1)%state.names.length;newGame(state.names,api,true);},{id:'rematch'}),button(api.tr('reset'),api.setup,{secondary:true}))));return;
  }
 }
-const shell=createShell({title:{en:'Friend Court',vi:'Phiên tòa bạn bè'},description:{en:'A fictional dispute. Two ridiculous remedies. One jury of your friends. Rotate roles, make your case and vote in secret.',vi:'Một tình huống hư cấu. Hai cách xử lý hài hước. Bồi thẩm đoàn là bạn bè. Đổi vai, tranh luận và bỏ phiếu kín.'},theme:'court',onStart:newGame,onRender:render});shell.rules={en:words.en.rules,vi:words.vi.rules};shell.redraw();
+const shell=createShell({title:{en:'Friend Court',vi:'Phiên tòa bạn bè'},description:{en:'A fictional dispute. Two ridiculous remedies. One jury of your friends. Rotate roles, make your case and vote in secret.',vi:'Một tình huống hư cấu. Hai cách xử lý hài hước. Bồi thẩm đoàn là bạn bè. Đổi vai, tranh luận và bỏ phiếu kín.'},theme:'court',onStart:newGame,onRender:render,getScene:courtScene});shell.rules={en:words.en.rules,vi:words.vi.rules};shell.redraw();
