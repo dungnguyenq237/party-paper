@@ -28,3 +28,7 @@ flowchart LR
 ```
 
 The [room lifecycle](../contracts/room-lifecycle.md) specifies create, join, ready, initialization, resumption, host loss, minimum quorum, results, fresh rematch and cleanup, including loading, offline, empty and expired screens. Apply the game-specific exceptions above. Implement this module under `src/games/inheritance-war/`. Its intents, projections and regression fixtures must satisfy the [module](../contracts/game-module-contract.md) and [wire contracts](../contracts/multiplayer-events.md). Publish reviewed EN/VI rules and controls for phone and desktop browsers.
+
+## Independent review gate (IR-M07)
+
+Use unique public lot IDs and phase instances. If chair nominates archive and no legal personal nominee exists, award archive directly; otherwise choose legal challenger fallback deterministically. Influence spending is atomic on final non-abstaining ballot; timeout/abstain never spend. Reading extends discussion once per lot by 10 s; visible new deadline and generation prevent reuse after reconnect. Test always-archive, coordinated tie forcing, ally-voting and self-nomination at 5/6/10 seats; track kingmaking, durable coalitions and seat advantage. Compare repeat preference and negotiation choices against Corporate Chaos; retire if redundant. Mobile prioritizes current lot/two nominees, private influence and collapsible custody history. Paid estates require observed repeat play.

@@ -7,7 +7,7 @@ Priority estimates reflect severity and uncertainty, not measured probabilities.
 | Existing canonical hostname cannot be reused by a web service (M/H) | Domain and host control rehearsal / operator | P0 verifies service type, redirect ability and rollback before routing. No cutover until rehearsal. |
 | Private hands/solutions leak via a public repo, shared payload or CDN (M/H) | Viewer fixtures and public artifact scan / security owner | Private distribution for paid assets, explicit public roots, allowlisted projections and no-store. Disable affected pack immediately, rotate access and review disclosures. |
 | Simultaneous input double-spends or double-scores (M/H) | Concurrency fixtures and receipt/revision counters / backend owner | Per-room queue, transaction, duplicate receipts, target version validation. Pause affected game creation if invariant fails. |
-| Single disk creates downtime or fails (M/H) | Ack/resume/restore drill / operator | Drain outside events, rehydrate deadlines, decouple receipts from ephemeral rooms. Booked events require rehearsal, run sheet and incident owner. |
+| Single disk creates downtime or fails (M/H) | Ack/resume/restore drill / operator | Drain outside events, resume intact DB only; abandon transient rooms and invalidate credentials after lost/rolled-back disk. Separate consistent commercial backups. Booked events require rehearsal, run sheet and incident owner. |
 | Mobile fonts or layout strand a guest (H/M) | Tamil baseline, physical phone and keyboard tests / frontend owner | F1 owns baseline repair · key-based EN/VI rendering, no private UI auto-translation, low-motion and text variants. |
 | Game success depends on exclusion, dominant seats or inevitable collusion (M/H) | Seeded policies, playtest interviews, pass rates / game designer | No individual workplace judgments, bounded grants, rotating speakers, blind ballots, typed/pass route. Rebalance before public launch. |
 | Audio leaks, is incompatible or outlives consent (M/H) | Real devices, deletion/revocation probes and overdue counters / media owner | Disable new audio on failure · text mode, non-backed-up bytes, separate erasure probe and private incident contact. |
@@ -15,7 +15,7 @@ Priority estimates reflect severity and uncertainty, not measured probabilities.
 | AI usage creates unexpected liability (M/H for live) | Auditable reserve-to-vendor reconciliation / product owner | Replay-only default, no tools, no live budget · if funded, hard pre-reservation on each call and disable at cap. |
 | Content production consumes all revenue (H/M) | Track hours/pack, trial-to-paid and net contribution / editor | Original playable free case, paid next-case test, limited languages. Stop production if plausible purchases do not cover costs. |
 | Ads or analytics violate user expectations (M/H) | Consent-off tests, data inventory / privacy owner | Keep gameplay ad-free, scoped notices, aggregate events and regional CMP review. Stop optional collection if owner/support cannot fulfill policy. |
-| Many agents contend on migrations/dependencies (M/M) | Duplicate versions or wide integration diffs / integrator | Freeze contracts after slice, single owner for package/registry/schema, serial migrations with prior-reader fixture. |
+| Many agents contend on migrations/dependencies (M/M) | Duplicate versions or wide integration diffs / integrator | R1 provisional; R2 after two executable engines and contention fixture, WIP cap and single owner for package/registry/schema, serial migrations with prior-reader fixture. |
 | SEO duplicates bury valuable print pages (M/M) | Static crawl and Search Console / growth owner | Preserve old paths, publish complete localized pages for enabled games, keep rooms uncrawlable by content exposure and noindex. |
 | Solo operator cannot support eight live products (H/H) | Hours/week for issues, events and content / owner | Incremental release, price human support, maintain feature flags and retirement path. Pause a module if releases/incident response exceed available staffing. |
 
@@ -37,3 +37,17 @@ Priority estimates reflect severity and uncertainty, not measured probabilities.
 ## Unresolved assumptions for the owner
 
 Confirm whether Party Partner is the desired collection name. Whether the current canonical hostname and logs are under operator control. Permitted monthly spend, hosting geography and audience ages. Who can respond privately to reports or refunds. Who owns bilingual editing and original artwork. Which pilot hosts/venues are available. And which regions/legal terms apply to audio and checkout. Owner must review before implementation begins. Optional paid, audio and live-model questions block their particular releases, not the creation of unrelated planning evidence.
+
+## Independent review additions
+
+| Risk | Evidence / accountable owner | Stop condition |
+|---|---|---|
+| Stale backup resurrects revoked credentials/media/rooms (H impact) | IR-C01, ops/security, separate restart/disaster drills | No guest traffic after stale restore until transient state discarded and namespace rotated. |
+| Trusted lifecycle or old socket bypasses queue (H impact) | IR-C02,H01,H02, protocol owner, race/generation fixtures | No affected release with stale writes/leaked projection; approve semantics before F2. |
+| Premature shared protocol freeze (H impact) | IR-H05, integrator, two executable engines | No G3–G8 implementation before R2. |
+| Direct debate competition and jury downtime (M/H) | IR-H07, product owner, P0 comparative sessions | No specific slice authorization without candidate evidence. |
+| Snapshot fan-out or retention exceeds budget (M/H) | IR-H03,H06, ops, actual usage/retention | Close admission at measured caps; no event/media promises without specialty gates. |
+| Unclear/degenerate game rules (M/H) | IR-H08,M03–M10, game owner | Block affected title until rules/fixtures and playtests satisfy GDD. |
+| Solo owner unavailable for paid support (M/H) | IR-M08, product owner, actual hours and named backup | No booked service beyond staffed capacity or agreed fallback. |
+
+[Independent review](INDEPENDENT_REVIEW.md) tracks evidence and implementation impact.
