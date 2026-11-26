@@ -9,6 +9,7 @@ export class RoomClient{
   private socket:WebSocket|null=null;
   private generation=0;
   private pending:Command|null=null;
+  private awaitingRev:number|null=null;
   private timeout:number|undefined;
   constructor(private readonly listener:(s:RoomClientState)=>void){}
   private update(patch:Partial<RoomClientState>):void{this.state={...this.state,...patch};this.listener(this.state);}
@@ -17,7 +18,7 @@ export class RoomClient{
     const value:unknown=await r.json();if(!r.ok)throw Error('Request rejected ('+r.status+')');return value;
   }
   private async session():Promise<void>{const r=await this.post('/api/session',{}) as {csrf?:unknown};if(typeof r.csrf!=='string')throw Error('Session unavailable');this.csrf=r.csrf;}
-  private stop():void{this.generation++;this.socket?.close();this.socket=null;window.clearTimeout(this.timeout);this.pending=null;}
+  private stop():void{this.generation++;this.socket?.close();this.socket=null;window.clearTimeout(this.timeout);this.pending=null;this.awaitingRev=null;}
   disconnect():void{this.stop();this.update({connection:'disconnected',pending:false,feedback:'Disconnected'});}
   reset():void{this.stop();this.update({view:null,connection:'idle',pending:false,feedback:''});}
   async open(kind:'create'|'join',alias:string,code=''):Promise<void>{
@@ -41,8 +42,8 @@ export class RoomClient{
       if(gen!==this.generation)return;
       try{
         const frame=decodeServerFrame(JSON.parse(String(e.data)));
-        if(frame.type==='snapshot'){if(acceptSnapshot(this.state.view,frame)){window.clearTimeout(this.timeout);this.update({view:frame,connection:'connected'});}return;}
-        if(frame.type==='ack'){if(this.pending?.commandId===frame.commandId){this.pending=null;window.clearTimeout(this.timeout);this.update({pending:false,feedback:'Accepted · r'+frame.acceptedRev});}return;}
+        if(frame.type==='snapshot'){if(acceptSnapshot(this.state.view,frame)){const resolved=this.awaitingRev!==null&&frame.rev>=this.awaitingRev;if(resolved){this.awaitingRev=null;window.clearTimeout(this.timeout);}else if(this.state.connection==='connecting')window.clearTimeout(this.timeout);this.update({view:frame,connection:'connected',pending:resolved?false:this.state.pending});}return;}
+        if(frame.type==='ack'){if(this.pending?.commandId===frame.commandId){this.pending=null;window.clearTimeout(this.timeout);const waiting=(this.state.view?.rev??-1)<frame.acceptedRev;this.awaitingRev=waiting?frame.acceptedRev:null;this.update({pending:waiting,feedback:'Accepted · r'+frame.acceptedRev});if(waiting)this.timeout=window.setTimeout(()=>{if(this.awaitingRev!==null){this.awaitingRev=null;ws.close();}},8000);}return;}
         if(frame.commandId===this.pending?.commandId||frame.commandId===null){this.pending=null;window.clearTimeout(this.timeout);this.update({pending:false,feedback:frame.code});}
       }catch{this.stop();this.update({connection:'error',pending:false,feedback:'Invalid server frame'});}
     };
@@ -50,7 +51,7 @@ export class RoomClient{
     ws.onerror=()=>{if(gen===this.generation)this.update({feedback:'Connection error'});};
   }
   send(action:Action):void{
-    const v=this.state.view,ws=this.socket;if(!v||!ws||ws.readyState!==WebSocket.OPEN||this.state.connection!=='connected'||this.pending)return;
+    const v=this.state.view,ws=this.socket;if(!v||!ws||ws.readyState!==WebSocket.OPEN||this.state.connection!=='connected'||this.pending||this.awaitingRev!==null)return;
     const c:Command={v:1,type:'command',matchId:v.matchId,phaseId:v.phaseId,seenRev:v.rev,commandId:crypto.randomUUID(),action};
     this.pending=c;this.update({pending:true,feedback:''});ws.send(JSON.stringify(c));
     this.timeout=window.setTimeout(()=>{if(this.pending===c){this.pending=null;this.update({pending:false,feedback:'No receipt. Resync before retrying.'});ws.close();}},8000);
