@@ -1,6 +1,6 @@
 // Original vector cast inspired by the owner-reviewed concept sheets.
 // The art layer consumes presentation-only data. Never pass private ballots or mandates.
-import {el} from './ui.js';
+function el(tag,text='',className=''){const n=document.createElement(tag);if(text)n.textContent=text;if(className)n.className=className;return n;}
 
 const palette={
  judge:{skin:'#efb689',shade:'#c98462',hair:'#e4dbcb',coat:'#9d343c',trim:'#efc070',shirt:'#fff2d4',pants:'#4c3942',kind:'judge'},
@@ -48,8 +48,8 @@ function avatarSvg(p,mood){
  '<g class="cast-body" stroke="'+outline+'" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">'+
  '<g class="cast-legs"><path d="M69 189L68 224H93L99 192M103 191L108 224H132L130 189" fill="'+p.pants+'"/><path d="M68 221L92 221L93 236H57Q52 230 68 221ZM109 221H132Q147 228 143 236H108Z" fill="#40343f"/><path d="M59 233H93M109 233H142" stroke="'+p.trim+'"/></g>'+
  '<path d="M74 111Q100 100 126 112Q142 123 145 164L140 203Q100 217 60 203L56 164Q57 126 74 111Z" fill="'+p.coat+'"/><path d="M81 112L100 151L119 112L126 160L105 206L95 207L74 160Z" fill="'+p.shirt+'"/><path d="M71 119L83 139L77 160L91 202M129 119L117 139L123 160L109 202" stroke="'+p.trim+'" stroke-width="5" fill="none"/><path d="M91 151L100 145L109 151L104 163L110 180L100 190L90 180L96 163Z" fill="'+p.trim+'"/>'+
- '<g class="cast-arm cast-arm-left"><path d="M63 124Q42 130 35 158L49 171L67 150" fill="'+p.coat+'"/><path d="M39 155Q29 159 33 172Q39 183 48 174L54 164Z" fill="'+p.skin+'"/>'+prop(p)+'</g>'+
- '<g class="cast-arm cast-arm-right"><path d="M137 126Q151 133 164 153L153 171L135 150" fill="'+p.coat+'"/><path d="M159 153Q170 151 175 159L177 168Q168 177 157 169Z" fill="'+p.skin+'"/></g>'+
+ '<g class="cast-arm cast-arm-left"><path d="M63 124Q42 130 35 158L49 171L67 150" fill="'+p.coat+'"/><path d="M39 155Q29 159 33 172Q39 183 48 174L54 164Z" fill="'+p.skin+'"/>'+(p.kind==='judge'?'':prop(p))+'</g>'+
+ '<g class="cast-arm cast-arm-right"><path d="M137 126Q151 133 164 153L153 171L135 150" fill="'+p.coat+'"/><path d="M159 153Q170 151 175 159L177 168Q168 177 157 169Z" fill="'+p.skin+'"/>'+(p.kind==='judge'?prop(p):'')+'</g>'+
  '<g class="cast-head">'+hair(p)+'<path d="M86 98H114V124Q101 139 86 124Z" fill="'+p.shade+'"/><ellipse cx="47" cy="80" rx="10" ry="14" fill="'+p.skin+'"/><ellipse cx="153" cy="80" rx="10" ry="14" fill="'+p.skin+'"/><path d="M51 49Q61 26 100 28Q139 28 149 49L151 85Q148 117 100 123Q54 117 49 85Z" fill="'+p.skin+'"/><path d="M55 91Q62 114 100 119Q134 115 146 93Q142 117 100 123Q58 118 55 91Z" fill="'+p.shade+'" stroke="none" opacity=".5"/>'+fringe(p)+
  '<path d="M66 69Q76 '+(sad?'60':'63')+' 87 70M113 70Q125 '+(sad?'60':'63')+' 135 69" stroke="'+p.hair+'" stroke-width="5" fill="none"/>'+
  (happy?'<path d="M68 83Q77 74 86 83M115 83Q125 74 134 83" stroke-width="4" fill="none"/>':'<g class="cast-eyes" fill="#fff8ea"><ellipse cx="77" cy="83" rx="10" ry="'+(mood==='react'?13:10)+'"/><ellipse cx="124" cy="83" rx="10" ry="'+(mood==='react'?13:10)+'"/><ellipse cx="79" cy="84" rx="5" ry="6" fill="#382c3a" stroke="none"/><ellipse cx="122" cy="84" rx="5" ry="6" fill="#382c3a" stroke="none"/><circle cx="80" cy="81" r="1.8" fill="white" stroke="none"/><circle cx="123" cy="81" r="1.8" fill="white" stroke="none"/></g>')+
