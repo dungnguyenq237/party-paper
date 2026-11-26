@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>Room Lab | Party Paper</title><link rel="stylesheet" href="./room-lab.css"><script type="module" src="./room-lab.js"></script></head>
+<body>
+<header><a href="../../" class="brand">Party Paper <span> / Labs</span></a><button id="language" type="button" aria-label="Change language">Tiếng Việt</button></header>
+<main>
+<section class="intro"><p class="eyebrow" id="eyebrow">FOUNDATION / F2 + F3</p><h1 id="title">Room Lab<span>.</span></h1><p id="description">Try the room lifecycle with four fictional seats. This is a local browser simulation, not Friend Court or an online multiplayer room.</p><p class="notice" id="notice">No accounts, network rooms, database or private real-world information. Switch seats to simulate different players; all data resets on reload.</p></section>
+<section class="status" aria-label="Room status"><div><small id="room-label">ROOM</small><strong>LAB234</strong></div><div><small id="phase-label">PHASE</small><strong id="phase">Lobby</strong></div><div><small id="revision-label">REVISION</small><strong id="revision">1</strong></div><div><small id="host-label">HOST</small><strong id="host">Alex</strong></div></section>
+<div class="layout">
+<section class="panel"><h2 id="seats-title">Seats</h2><p class="muted" id="seats-help">Choose the seat you want to control.</p><div id="seats" class="seats"></div><button class="secondary" id="join" type="button">Add a seat</button></section>
+<section class="panel action"><p class="eyebrow" id="actor-label">YOUR VIEW</p><h2 id="actor">Alex</h2><p id="instruction"></p><div id="actions" class="actions"></div><div class="choice-cards" id="choices" hidden><button class="amber" id="amber" type="button"><span>◆</span> <span id="amber-label">Amber</span></button><button class="violet" id="violet" type="button"><span>●</span> <span id="violet-label">Violet</span></button></div><div id="counts"></div><p id="feedback" class="feedback" role="status" aria-live="polite">Ready to begin.</p></section>
+</div>
+<section class="panel bottom"><div><h2 id="tools-title">Test recovery</h2><p class="muted" id="tools-help">Replay the last accepted command, replace the connection, or advance the clock. These are simulated, not real server tests.</p><div class="actions"><button id="retry" class="secondary" type="button">Retry last command</button><button id="disconnect" class="secondary" type="button">Disconnect seat</button><button id="reconnect" class="secondary" type="button">Reconnect seat</button><button id="clock" class="secondary" type="button">Advance 45s</button><button id="reset" class="secondary" type="button">Reset lab</button></div></div><div><h2 id="log-title">Event receipts</h2><ol id="log" aria-label="Recent events"></ol></div></section>
+</main>
+<footer id="footer">Party Paper · synthetic review fixture · no production release</footer>
+</body></html>
