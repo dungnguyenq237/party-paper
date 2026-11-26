@@ -64,7 +64,7 @@ export function recover(r:Room,now:number):void {
     // Repeated process restarts must not renew the recovery window.
     const existing=r.status==='paused'?r.deadlineAt:null;
     if(r.status==='active')r.remainingMs=Math.max(0,(r.deadlineAt??now)-now);
-    r.status='paused';r.phase++;r.recovering=true;
+    r.status='paused';r.phase++;r.recovering=true;r.pauseUsed=true;
     r.deadlineAt=Math.min(r.expiresAt,existing??now+LIMITS.reconnectMs,now+LIMITS.reconnectMs);
   }
   r.rev++;
