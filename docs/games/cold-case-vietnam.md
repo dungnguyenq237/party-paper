@@ -33,7 +33,7 @@ A minimal authoring example uses the same structure for every finding. Store rea
     {"id":"place","options":["loft","truck","dye-room"],"answer":"loft","supportPairs":[["E3","E4"]]},
     {"id":"reason","options":["leak","count","cue"],"answer":"leak","supportPairs":[["E5","E6"]]}
   ],
-  "deal": {"method":"shuffled-round-robin","clueIds":["E1","E2","E3","E4","E5","E6","E7","E8"]},
+  "deal": {"method":"seeded-constrained","clueIds":["E1","E2","E3","E4","E5","E6","E7","E8"]},
   "hints": ["compare-carriers","check-weather"],
   "debriefKey": "indigo.debrief"
 }
