@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "rootDir": "src",
+    "outDir": ".build/client"
+  },
+  "include": [
+    "src/platform/client/**/*.ts",
+    "src/contracts/**/*.ts"
+  ]
+}

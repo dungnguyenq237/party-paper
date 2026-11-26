@@ -8,7 +8,7 @@ const base=process.env.E2E_BASE_URL||'http://127.0.0.1:8765/';
 const adapter=page=>({playwright:page,goto:url=>page.goto(url),title:()=>page.title(),url:()=>page.url()});
 test('all 38 workspace languages preserve user content',async({page})=>{await localeMatrix(adapter(page),base,catalogs,languages,app);});
 test('all localized information pages keep metadata and links',async({page})=>{const pages=['about.html','privacy.html','contact.html','guide.html'];if(app==='subtitle-studio')pages.push('subtitle-delay.html','srt-vtt-conversion.html','subtitle-errors.html');await contentMatrix(adapter(page),base,pages,catalogs,languages);});
-for(const width of [320,390])test(`all 38 locales fit ${width}px`,async({page})=>{await page.setViewportSize({width,height:900});await page.goto(base+'?lang=en');await expect(page.locator('html')).toHaveAttribute('data-i18n-ready','true');for(const locale of languages){await page.locator('#site-language').selectOption(locale.code);await expect(page.locator('html')).toHaveAttribute('lang',locale.code);const metrics=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth}));if(metrics.scroll>metrics.width+1)console.error('[e2e:mobile]',locale.code,metrics);expect(metrics.scroll,locale.code).toBeLessThanOrEqual(metrics.width+1);}});
+for(const width of [320,390])test(`all 38 locales fit ${width}px`,async({page})=>{await page.setViewportSize({width,height:900});await page.goto(base+'?lang=en');await expect(page.locator('html')).toHaveAttribute('data-i18n-ready','true');for(const locale of languages){await page.locator('#site-language').selectOption(locale.code);await expect(page.locator('html')).toHaveAttribute('lang',locale.code);await page.evaluate(async()=>{await document.fonts.ready; await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});const metrics=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth,overflow:[...document.querySelectorAll('.workspace,.settings,.settings input,.settings select,.create-actions>*')].map(el=>({tag:el.tagName,id:el.id,left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right})).filter(el=>el.left< -1||el.right>innerWidth+1)}));if(metrics.scroll>metrics.width+1)console.error('[e2e:mobile]',locale.code,metrics);expect(metrics.scroll,locale.code).toBeLessThanOrEqual(metrics.width+1);}});
 test('localized main workflow',async({page})=>{await(app==='subtitle-studio'?subtitleFlow:partyFlow)(adapter(page),base);});
 test('exact translated errors and generated-content regressions',async({page})=>{await regressionFlow(adapter(page),base,catalogs,app);});
 test('navigation, stored preference and keyboard',async({page})=>{await persistenceFlow(adapter(page),base);});
@@ -88,4 +88,38 @@ test('new guides, game library and mobile layouts remain accessible',async({page
 test('new mode drafts survive switching and malformed trivia prevents printing',async({page})=>{
  await page.goto(base+'?game=trivia&lang=en');await page.locator('#items').fill('Missing answer');await page.locator('#generate').click();await expect(page.locator('#status')).toContainText('question | answer');await expect(page.locator('#print')).toBeDisabled();
  await page.locator('#mode').selectOption('conversation');await page.locator('#items').fill('My private prompt');await page.locator('#mode').selectOption('bingo');await page.locator('#mode').selectOption('conversation');await expect(page.locator('#items')).toHaveValue('My private prompt');
+});
+
+test('Tamil layout remains contained after generation and theme change',async({page})=>{
+ await page.setViewportSize({width:320,height:900});
+ await page.goto(base+'?lang=ta');
+ await expect(page.locator('html')).toHaveAttribute('data-i18n-ready','true');
+ await expect(page.locator('html')).toHaveAttribute('lang','ta');
+ await page.locator('#generate').click();
+ await page.locator('[data-theme-choice="dark"]').click();
+ await page.evaluate(async()=>{await document.fonts.ready;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
+ const metrics=await page.evaluate(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth,settings:document.querySelector('.settings').getBoundingClientRect().width,workspace:document.querySelector('.workspace').getBoundingClientRect().width}));
+ expect(metrics.scroll,JSON.stringify(metrics)).toBeLessThanOrEqual(metrics.width+1);
+ expect(metrics.settings).toBeLessThanOrEqual(metrics.workspace+1);
+ await expect(page.locator('#print')).toBeEnabled();
+});
+
+test('isolated artifact serves legacy routes under the Pages prefix',async({page,request})=>{
+ test.skip(!!process.env.E2E_BASE_URL,'Local prefix fixture only');
+ const prefix=new URL('/party-paper/',base).href;
+ await page.goto(prefix+'?game=trivia&lang=vi');
+ await expect(page.locator('html')).toHaveAttribute('data-i18n-ready','true');
+ await expect(page.locator('#mode')).toHaveValue('trivia');
+ await expect(page.locator('#print')).toBeEnabled();
+ for(const path of ['games.html','guide.html','privacy.html','robots.txt','sitemap.xml','ads.txt','assets/i18n/ta.json']){
+  expect((await request.get(prefix+path)).status(),path).toBe(200);
+ }
+});
+
+test('preview denies private source, planning files and traversal',async({request})=>{
+ test.skip(!!process.env.E2E_BASE_URL,'Local artifact boundary only');
+ for(const path of ['package.json','docs/planning/MASTER_PLAN.md','src/platform/server/index.ts','.build/server/platform/server/index.js','assets/%2e%2e/package.json','%2e%2e/package.json','assets/unknown.js','data/room.sqlite']){
+  expect((await request.get(base+path)).status(),path).toBe(404);
+ }
+ expect((await request.post(base)).status()).toBe(405);
 });
