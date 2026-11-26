@@ -1,6 +1,6 @@
 # Voice Telephone
 
-**4–12 players · 8–18 minutes · friends on phones or desktops with supported microphones.** Pass a ridiculous phrase through short recordings, then hear where it changed. Designed for laugh-with-the-group play, with a fully playable text relay for guests who prefer it. No speech recognition, voice cloning or live conferencing.
+**4–12 players · 8–18 minutes target · friends on phones or desktops.** G7 is a complete private text relay; recorded voice is a conditional V1 extension, not a G7 requirement. Pass a ridiculous phrase through short recordings, then hear where it changed. Designed for laugh-with-the-group play, with a fully playable text relay for guests who prefer it. No speech recognition, voice cloning or live conferencing.
 
 ## Rules and chain construction
 
@@ -27,3 +27,7 @@ flowchart LR
 ```
 
 The [room lifecycle](../contracts/room-lifecycle.md) specifies create, join, ready, initialization, resumption, host loss, minimum quorum, results, fresh rematch and cleanup, including loading, offline, empty and expired screens. Apply the game-specific exceptions above. Implement this module under `src/games/voice-telephone/`. Its intents, projections and regression fixtures must satisfy the [module](../contracts/game-module-contract.md) and [wire contracts](../contracts/multiplayer-events.md). Publish reviewed EN/VI rules and controls for phone and desktop browsers.
+
+## Independent review gate (IR-M09)
+
+G7 validates a complete text relay, including gap handling, consent to share text, reveal and award. V1 only if participants prefer audio enough to fund device/privacy support. At 12 seats, 48 clips × 256 KiB = 12 MiB accepted per match before partial uploads and read traffic. Pre-reserve per-hop, room and global bytes; expire partial reservations, bound parser resources. Negotiate actual cross-device playback for relevant sender/receiver combinations or keep the entire match text before start. If consent withdrawn during audio relay, revoke affected grants immediately and stop new audio for the match; offer authorized surviving reveal/incomplete result and text rematch, never silently change mode. No voice backups, verify grant denial/unlink/janitor deadlines including restart. Disclose that earlier listeners could independently record. Full 12-chain reveal takes up to 384 s of audio alone; allow selected chain/skip with accessible text labels. Compare actual repeat preference against text relay/Gartic Phone. No monetized retention.
