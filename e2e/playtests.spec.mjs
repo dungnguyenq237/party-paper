@@ -14,14 +14,14 @@ test('Friend Court: four complete hearings, replacement, private handoffs, score
  const server=await staticPlaytests();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  try{
   await page.goto(server.base+'friend-court/');await fit(page,320);await expect(page.getByRole('heading',{name:'Friend Court'})).toBeVisible();await page.screenshot({path:info.outputPath('friend-setup.png'),fullPage:true});
-  await page.locator('#start').click();await page.locator('#replace').click();await expect(page.locator('#replace')).toBeDisabled();
+  await expect(page.locator('.game-scene[data-stage="setup"] .cast-slot')).toHaveCount(4);await expect(page.locator('#sound')).toHaveAttribute('aria-pressed','false');await page.locator('#start').click();await expect(page.locator('[data-role="judge"]')).toHaveAttribute('data-mood','speak');await page.locator('#replace').click();await expect(page.locator('#replace')).toBeDisabled();
   for(let i=0;i<4;i++){
-   await page.locator('#accept').click();
+   await page.locator('#accept').click();await expect(page.locator('.game-scene[data-stage="argument"] [data-mood="speak"]')).toHaveCount(1);
    if(i===0){await page.locator('#argument').fill('Fictional test argument');await page.locator('#submit-text').click();await page.getByRole('button',{name:'Conceal text'}).click();await expect(page.getByText('Fictional test argument',{exact:true})).toHaveCount(0);}
    else await page.locator('#speak').click();
    await page.locator('#speak').click();
-   for(let j=0;j<2;j++){await expect(page.locator('#reveal')).toBeVisible();await expect(page.locator('#vote-a')).toHaveCount(0);await page.locator('#reveal').click();await page.locator(j===0?'#vote-a':'#vote-b').click();}
-   await expect(page.getByText('Shared point',{exact:true})).toBeVisible();if(i===0)await page.screenshot({path:info.outputPath('friend-verdict.png'),fullPage:true});
+   for(let j=0;j<2;j++){await expect(page.locator('#reveal')).toBeVisible();await expect(page.locator('#vote-a')).toHaveCount(0);await expect(page.locator('.game-scene[data-private="true"] .cast-slot')).toHaveCount(1);await page.locator('#reveal').click();await page.locator(j===0?'#vote-a':'#vote-b').click();}
+   await expect(page.getByText('Shared point',{exact:true})).toBeVisible();await expect(page.locator('.game-scene')).toHaveAttribute('data-outcome','tie');await expect(page.locator('[data-role="advocateA"]')).toHaveAttribute('data-mood','celebrate');await expect(page.locator('[data-role="advocateB"]')).toHaveAttribute('data-mood','celebrate');if(i===0)await page.screenshot({path:info.outputPath('friend-verdict.png'),fullPage:true});
    await page.locator('#next-hearing').click();
   }
   await expect(page.getByRole('heading',{name:'Final verdict'})).toBeVisible();await expect(page.locator('table td')).toHaveText(['2','2','2','2']);
@@ -34,10 +34,10 @@ test('Corporate Chaos: four quarters, private commitments, audit, rankings and m
   await page.goto(server.base+'corporate-chaos/');await fit(page,390);await page.locator('#start').click();
   for(let q=0;q<4;q++){
    await page.locator('#brief-next').click();
-   for(let p=0;p<4;p++){await expect(page.locator('#reveal')).toBeVisible();await page.locator('#reveal').click();await expect(page.getByText('Your secret mandate',{exact:true})).toBeVisible();await page.locator('#mandate-next').click();}
+   for(let p=0;p<4;p++){await expect(page.locator('#reveal')).toBeVisible();await page.locator('#reveal').click();await expect(page.getByText('Your secret mandate',{exact:true})).toBeVisible();await expect(page.locator('.game-scene[data-private="true"] .cast-slot')).toHaveCount(1);await page.locator('#mandate-next').click();}
    await page.locator('#commit-orders').click();
-   for(let p=0;p<4;p++){await page.locator('#reveal').click();await expect(page.locator('#seal')).toBeDisabled();await page.locator('#plus-D').click();await page.locator('#plus-T').click();await expect(page.locator('#plus-V')).toBeDisabled();if(q===0&&p===0)await page.screenshot({path:info.outputPath('corporate-order.png'),fullPage:true});await page.locator('#seal').click();}
-   await expect(page.getByRole('heading',{name:'Project succeeds'})).toBeVisible();await expect(page.getByText('Your secret mandate',{exact:false})).toHaveCount(0);if(q===0)await page.screenshot({path:info.outputPath('corporate-audit.png'),fullPage:true});await page.locator('#audit-next').click();
+   for(let p=0;p<4;p++){await page.locator('#reveal').click();await expect(page.locator('#seal')).toBeDisabled();await page.locator('#plus-D').click();await page.locator('#plus-T').click();await expect(page.locator('#plus-V')).toBeDisabled();await expect(page.locator('.effort-pips [data-used="true"]')).toHaveCount(2);if(q===0&&p===0)await page.screenshot({path:info.outputPath('corporate-order.png'),fullPage:true});await page.locator('#seal').click();}
+   await expect(page.getByRole('heading',{name:'Project succeeds'})).toBeVisible();await expect(page.locator('.game-scene')).toHaveAttribute('data-outcome','success');await expect(page.locator('.cast-slot[data-mood="celebrate"]')).toHaveCount(4);await expect(page.getByText('Your secret mandate',{exact:false})).toHaveCount(0);if(q===0)await page.screenshot({path:info.outputPath('corporate-audit.png'),fullPage:true});await page.locator('#audit-next').click();
   }
   await expect(page.getByRole('heading',{name:'Company survives'})).toBeVisible();await expect(page.locator('table tr')).toHaveCount(5);
   await page.locator('#rematch').click();await page.locator('#language').click();await expect(page.locator('html')).toHaveAttribute('lang','vi');await fit(page,320);await page.screenshot({path:info.outputPath('corporate-vi-320.png'),fullPage:true});expect(errors).toEqual([]);
@@ -56,4 +56,24 @@ test('P1 actual browser controls use real local server and distinct sessions',as
   await a.getByRole('button',{name:'Reconnect',exact:true}).click();await expect(a.locator('#connection')).toHaveText('connected');await expect(a.locator('#room')).toContainText('Your choice: Amber');
   await b.getByRole('button',{name:'Violet',exact:true}).click();await expect(a.locator('#room')).toContainText('Amber: 1 · Violet: 1');await a.getByRole('button',{name:'Rematch',exact:true}).click();await expect(a.locator('#room h2')).toContainText('lobby');await fit(a,320);
  }finally{await Promise.all(contexts.map(c=>c.close()));await app.close();}
+});
+
+test('Visual stage: desktop artwork, actual animated gavel, manual motion and reduced-motion preference',async({page},info)=>{
+ const server=await staticPlaytests();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ try{
+  await page.emulateMedia({reducedMotion:'no-preference',colorScheme:'light'});
+  await page.setViewportSize({width:1280,height:900});await page.goto(server.base+'friend-court/');
+  await expect(page.locator('.game-scene svg.cast-svg')).toHaveCount(4);
+  const arm=page.locator('[data-role="judge"] .cast-arm-right');await expect(arm).toHaveCSS('animation-name','cast-gavel');
+  await page.screenshot({path:info.outputPath('visual-court-desktop.png'),animations:'disabled',fullPage:true});
+  await page.locator('#motion').click();await expect(page.locator('body')).toHaveAttribute('data-motion','off');await expect(arm).toHaveCSS('animation-name','none');
+  await page.locator('#motion').click();await expect(arm).toHaveCSS('animation-name','cast-gavel');
+  await page.locator('#start').click();await expect(page.locator('.game-scene')).toHaveAttribute('data-stage','brief');
+  await page.locator('#accept').click();await expect(page.locator('.game-scene [data-mood="speak"] .cast-mouth')).toHaveCSS('animation-name','cast-talk');
+  await page.emulateMedia({reducedMotion:'reduce',colorScheme:'dark'});await fit(page,320);
+  await expect(page.locator('.game-scene [data-mood="speak"] .cast-mouth')).toHaveCSS('animation-name','none');
+  await page.screenshot({path:info.outputPath('visual-court-dark-320.png'),animations:'disabled',fullPage:true});
+  await page.goto(server.base+'corporate-chaos/');await expect(page.locator('body')).toHaveAttribute('data-motion','off');await expect(page.locator('.cast-svg')).toHaveCount(4);
+  await fit(page,390);await page.screenshot({path:info.outputPath('visual-office-dark-390.png'),animations:'disabled',fullPage:true});expect(errors).toEqual([]);
+ }finally{await server.close();}
 });
