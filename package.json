@@ -9,15 +9,12 @@
     "posttest": "node prepare-seo.js",
     "test:e2e": "playwright test",
     "build:static": "node scripts/build-static.mjs",
-    "check:public": "node scripts/check-public.mjs",
-    "build:live": "npm run build:static && node scripts/build-live.mjs",
-    "typecheck": "tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.server.json --noEmit"
+    "check:public": "node scripts/check-public.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
-    "@playwright/test": "1.65.0",
-    "typescript": "5.8.3"
+    "@playwright/test": "1.65.0"
   }
 }

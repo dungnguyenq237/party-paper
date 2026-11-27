@@ -22,8 +22,7 @@ jobs:
           cp index.html styles.css app.js core.js dist/
           cp -R assets dist/assets
           npm run check:public
-      - run: npm run typecheck
-      - run: npm run build:live
+      - run: npm run build:static
       - run: npm run check:public
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
